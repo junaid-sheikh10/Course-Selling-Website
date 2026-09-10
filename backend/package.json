@@ -6,16 +6,23 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "db:migrate": "node scripts/migrate.js"
+    "db:migrate": "node scripts/prisma.js migrate deploy",
+    "db:migrate:dev": "node scripts/prisma.js migrate dev",
+    "db:generate": "node scripts/prisma.js generate",
+    "db:validate": "node scripts/prisma.js validate",
+    "db:studio": "node scripts/prisma.js studio",
+    "db:baseline": "node scripts/prisma.js migrate resolve --applied 001_initial",
+    "postinstall": "node scripts/prisma.js generate"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@prisma/client": "6.19.3",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
-    "pg": "^8.16.3"
+    "prisma": "6.19.3"
   },
   "devDependencies": {
     "nodemon": "^3.1.9"
