@@ -1,42 +1,63 @@
 # Course Selling Website
 
-Express backend using PostgreSQL. The frontend will be added to `frontend/` in a later phase.
+Express/CommonJS backend using PostgreSQL and Prisma ORM 6.19.3. Prisma 6 is pinned for compatibility with the existing CommonJS JavaScript application. The frontend will be added to `frontend/` later.
 
 ```text
 backend/
+  prisma/
+    schema.prisma                 # Models mapped to existing SQL tables
+    migrations/001_initial/       # Initial PostgreSQL schema and constraints
+  scripts/prisma.js               # CLI wrapper; loads backend/.env
   src/
-    index.js          # Express app and startup
-    config.js         # JWT settings
-    db/               # PostgreSQL connection pool
-    repositories/     # Parameterized SQL queries
+    db/index.js                   # Shared Prisma Client
+    repositories/index.js         # Prisma queries and API serialization
     routes/
     middleware/
-  migrations/         # Versioned SQL schema
-  scripts/migrate.js  # Transactional migration runner
+    index.js
   .env.example
   package.json
 ```
 
-## Setup
+## Fresh database setup
 
-1. Install dependencies with `npm ci --prefix backend`.
-2. Create a PostgreSQL database named `course_selling` using your local installation or a hosted PostgreSQL service.
-3. Copy `backend/.env.example` to `backend/.env` if that file does not exist. Set `DATABASE_URL` to your database connection string and supply the two JWT secrets. Existing JWT settings were preserved during the folder move; the new `DATABASE_URL` must be filled in.
-4. Run `npm run db:migrate --prefix backend`.
-5. Run `npm run dev --prefix backend` for development, or `npm start --prefix backend`.
+1. Run `npm ci --prefix backend`. The postinstall script generates Prisma Client.
+2. Create a PostgreSQL database named `course_selling`, locally or with a hosted provider.
+3. Copy `backend/.env.example` to `backend/.env` if it does not exist. Set `DATABASE_URL` and both JWT secrets. Never commit `.env`.
+4. Run `npm run db:migrate --prefix backend` to apply committed migrations.
+5. Run `npm run dev --prefix backend` or `npm start --prefix backend`.
 
-The default port is 3300. Environment loading uses `backend/.env` regardless of the working directory. Never commit this file. No root npm package or frontend dependencies are required yet.
+Default port: 3300. All npm commands below can run from the repository root. Generation and schema validation can run without a database; migrations and Studio require a real connection string.
 
-Migrations run in a transaction, record applied filenames in `schema_migrations`, and skip those files on subsequent runs. Add a new numbered SQL file for future changes rather than editing an applied migration. The database itself must already exist; the runner creates its tables.
+## Existing database from the previous SQL migration
 
-## Database and API compatibility
+If you already applied the old `001_initial.sql`, do not run the initial migration again or reset the database. First verify that its four tables and constraints match `backend/prisma/migrations/001_initial/migration.sql`. Then register that migration as already applied:
 
-The schema contains `users`, `admins`, `courses`, and `purchases`. Courses reference their creator; purchases reference a user and course. Each user can purchase a course only once. Foreign keys prevent deletion of referenced records.
+```sh
+npm run db:baseline --prefix backend
+npm run db:migrate --prefix backend
+```
 
-New IDs are UUIDs, exposed through the existing `_id`, `courseId`, `creatorId`, and `userId` fields. API routes remain under `/api/v1/user`, `/api/v1/admin`, and `/api/v1/course`; authenticated requests still use the `token` header. Existing MongoDB IDs and tokens are not migrated. No MongoDB records are copied or deleted by this setup.
+Baselining records migration history without creating or deleting application tables. Do not baseline an empty or mismatched database. The old `schema_migrations` bookkeeping table may remain; Prisma uses `_prisma_migrations` instead. No existing database is automatically baselined, reset, or migrated by dependency installation.
 
-Prices use `NUMERIC(12,2)` in PostgreSQL and are returned as JSON numbers to preserve the existing API shape. Database constraint errors return 400 for invalid input or references and 409 for duplicate records.
+## Development commands
 
-## Scope of this phase
+```sh
+npm run db:validate --prefix backend
+npm run db:generate --prefix backend
+npm run db:migrate:dev --prefix backend -- --name describe_change
+npm run db:studio --prefix backend
+```
 
-This phase moves the backend and replaces MongoDB access with PostgreSQL. Authentication hardening, broader validation, and frontend implementation remain follow-up work. In particular, the existing plaintext password handling and admin login behavior have not been redesigned. The purchase endpoint records course access; it does not process payments.
+Edit `backend/prisma/schema.prisma`, then create and review a migration with `db:migrate:dev` against a development database. This command requires permission to create a shadow database. Use `db:migrate` to apply committed migrations in deployment. Regenerate the client after schema changes. Prisma is included as a runtime dependency so client generation also works when dev dependencies are omitted.
+
+Studio opens a browser interface for viewing and editing database records. pgAdmin can connect to the same PostgreSQL database independently of Prisma.
+
+## Compatibility and scope
+
+Tables: `users`, `admins`, `courses`, `purchases`. Models map camelCase fields to the existing snake_case SQL columns. UUID IDs continue to be returned as `_id` in records. Prices remain `NUMERIC(12,2)` in PostgreSQL and JSON numbers in API responses. Purchase timestamps remain stored but are omitted from existing API responses for compatibility.
+
+Foreign keys and the unique user/course purchase constraint remain. The nonnegative price CHECK is maintained in migration SQL because Prisma's schema does not express it. Preserve it when reviewing later migrations.
+
+Existing routes remain under `/api/v1/user`, `/api/v1/admin`, and `/api/v1/course`, with the existing `token` header. Duplicate records return 409; invalid database input returns 400. Course updates remain scoped to the authenticated creator.
+
+No MongoDB data or tokens are migrated. Authentication hardening, broader validation, and the frontend remain follow-up work; existing plaintext password handling and admin login behavior are unchanged. Purchases record course access and do not process payments.
