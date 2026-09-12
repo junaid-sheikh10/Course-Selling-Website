@@ -1,42 +1,56 @@
 # Course Selling Website
 
-Express backend using PostgreSQL. The frontend will be added to `frontend/` in a later phase.
+Express/CommonJS backend using SQLite and Prisma ORM 6.19.3. Prisma 6 is pinned for compatibility with the existing CommonJS JavaScript application. The frontend will be added to `frontend/` later.
 
 ```text
 backend/
+  prisma/
+    schema.prisma                 # Models mapped to existing SQL tables
+    migrations/001_initial/       # Initial SQLite schema and constraints
+  scripts/prisma.js               # CLI wrapper; loads backend/.env
   src/
-    index.js          # Express app and startup
-    config.js         # JWT settings
-    db/               # PostgreSQL connection pool
-    repositories/     # Parameterized SQL queries
-    routes/
-    middleware/
-  migrations/         # Versioned SQL schema
-  scripts/migrate.js  # Transactional migration runner
+    controllers/                  # HTTP request and response handling
+    services/                     # Application business rules
+    repositories/                 # Prisma database queries
+    routes/                       # API route declarations
+    middleware/                   # Authentication, authorization, and errors
+    validation/                   # Request schemas
+    db/index.js                   # Shared Prisma Client
+    index.js
   .env.example
   package.json
 ```
 
-## Setup
+## Fresh database setup
 
-1. Install dependencies with `npm ci --prefix backend`.
-2. Create a PostgreSQL database named `course_selling` using your local installation or a hosted PostgreSQL service.
-3. Copy `backend/.env.example` to `backend/.env` if that file does not exist. Set `DATABASE_URL` to your database connection string and supply the two JWT secrets. Existing JWT settings were preserved during the folder move; the new `DATABASE_URL` must be filled in.
-4. Run `npm run db:migrate --prefix backend`.
-5. Run `npm run dev --prefix backend` for development, or `npm start --prefix backend`.
+1. Run `npm ci --prefix backend`. The postinstall script generates Prisma Client.
+2. Copy `backend/.env.example` to `backend/.env` if it does not exist. Keep `DATABASE_URL="file:./dev.db"` and set `JWT_SECRET`. Never commit `.env`.
+3. No database server is required. Prisma creates the local database at `backend/prisma/dev.db`.
+4. Run `npm run db:migrate --prefix backend` to apply committed migrations.
+5. Run `npm run dev --prefix backend` or `npm start --prefix backend`.
 
-The default port is 3300. Environment loading uses `backend/.env` regardless of the working directory. Never commit this file. No root npm package or frontend dependencies are required yet.
+Default port: 3300. All npm commands below can run from the repository root. The SQLite database file and journal files are ignored by Git.
 
-Migrations run in a transaction, record applied filenames in `schema_migrations`, and skip those files on subsequent runs. Add a new numbered SQL file for future changes rather than editing an applied migration. The database itself must already exist; the runner creates its tables.
+## Development commands
 
-## Database and API compatibility
+```sh
+npm run db:validate --prefix backend
+npm run db:generate --prefix backend
+npm run db:migrate:dev --prefix backend -- --name describe_change
+npm run db:reset --prefix backend
+npm run db:studio --prefix backend
+```
 
-The schema contains `users`, `admins`, `courses`, and `purchases`. Courses reference their creator; purchases reference a user and course. Each user can purchase a course only once. Foreign keys prevent deletion of referenced records.
+Edit `backend/prisma/schema.prisma`, then create and review a migration with `db:migrate:dev`. Use `db:migrate` to apply committed migrations in deployment. `db:reset` deletes local data and rebuilds the development database. Regenerate the client after schema changes. Prisma is included as a runtime dependency so client generation also works when dev dependencies are omitted.
 
-New IDs are UUIDs, exposed through the existing `_id`, `courseId`, `creatorId`, and `userId` fields. API routes remain under `/api/v1/user`, `/api/v1/admin`, and `/api/v1/course`; authenticated requests still use the `token` header. Existing MongoDB IDs and tokens are not migrated. No MongoDB records are copied or deleted by this setup.
+Studio opens a browser interface for viewing and editing records in the local SQLite database. pgAdmin is for PostgreSQL and is not needed for this setup.
 
-Prices use `NUMERIC(12,2)` in PostgreSQL and are returned as JSON numbers to preserve the existing API shape. Database constraint errors return 400 for invalid input or references and 409 for duplicate records.
+## Current data model
 
-## Scope of this phase
+The schema contains `User`, `Course`, `WishlistItem`, `CartItem`, and `Enrollment`. A user with the `AUTHOR` role can create courses while retaining normal user capabilities. Course prices are stored in euro cents. Each course has between 1 and 20 seats, with 20 as the default.
 
-This phase moves the backend and replaces MongoDB access with PostgreSQL. Authentication hardening, broader validation, and frontend implementation remain follow-up work. In particular, the existing plaintext password handling and admin login behavior have not been redesigned. The purchase endpoint records course access; it does not process payments.
+Available seats are calculated from the course seat limit and enrollment count. Cart items do not reserve seats. The database migration enforces nonnegative prices, valid seat limits, unique wishlist/cart entries, and one enrollment per user and course.
+
+## API structure
+
+The backend mounts empty route modules at `/api/v1/auth`, `/api/v1/me`, and `/api/v1/courses`. Controllers, services, repositories, authentication middleware, and validation files are scaffolded. Endpoint implementations will be added after the API contract is finalized.

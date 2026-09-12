@@ -1,0 +1,85 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  AUTHOR
+}
+
+model User {
+  id              String         @id @default(uuid())
+  email           String         @unique
+  passwordHash    String         @map("password_hash")
+  name            String
+  birthYear       Int?           @map("birth_year")
+  role            Role           @default(USER)
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+  authoredCourses Course[]       @relation("CourseAuthor")
+  wishlistItems   WishlistItem[]
+  cartItems       CartItem[]
+  enrollments     Enrollment[]
+
+  @@map("users")
+}
+
+model Course {
+  id            String         @id @default(uuid())
+  title         String
+  description   String
+  priceInCents  Int            @map("price_in_cents")
+  seatLimit     Int            @default(20) @map("seat_limit")
+  authorId      String         @map("author_id")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  author        User           @relation("CourseAuthor", fields: [authorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  wishlistItems WishlistItem[]
+  cartItems     CartItem[]
+  enrollments   Enrollment[]
+
+  @@index([authorId], map: "courses_author_id_idx")
+  @@map("courses")
+}
+
+model WishlistItem {
+  userId    String   @map("user_id")
+  courseId  String   @map("course_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@id([userId, courseId])
+  @@index([courseId], map: "wishlist_items_course_id_idx")
+  @@map("wishlist_items")
+}
+
+model CartItem {
+  userId    String   @map("user_id")
+  courseId  String   @map("course_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@id([userId, courseId])
+  @@index([courseId], map: "cart_items_course_id_idx")
+  @@map("cart_items")
+}
+
+model Enrollment {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  courseId   String   @map("course_id")
+  enrolledAt DateTime @default(now()) @map("enrolled_at")
+  user       User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  course     Course   @relation(fields: [courseId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([userId, courseId], map: "enrollments_user_id_course_id_key")
+  @@index([courseId], map: "enrollments_course_id_idx")
+  @@map("enrollments")
+}
