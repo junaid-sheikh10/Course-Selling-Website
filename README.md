@@ -1,6 +1,6 @@
 # Course Selling Website
 
-Express/CommonJS backend using SQLite and Prisma ORM 6.19.3. Prisma 6 is pinned for compatibility with the existing CommonJS JavaScript application. The frontend will be added to `frontend/` later.
+Course-selling application with an Express/CommonJS backend and a React/TypeScript frontend. The backend uses SQLite and Prisma ORM 6.19.3, pinned for compatibility with the existing CommonJS JavaScript application.
 
 ```text
 backend/
@@ -19,6 +19,15 @@ backend/
     index.js
   .env.example
   package.json
+frontend/
+  src/
+    api/                         # Typed backend request functions
+    components/                  # Shared interface components
+    layouts/                     # Shared page layouts
+    pages/                       # Route-level screens
+    types/                       # API and domain types
+  .env.example
+  package.json
 ```
 
 ## Fresh database setup
@@ -30,6 +39,14 @@ backend/
 5. Run `npm run dev --prefix backend` or `npm start --prefix backend`.
 
 Default port: 3300. All npm commands below can run from the repository root. The SQLite database file and journal files are ignored by Git.
+
+## Frontend setup
+
+1. Run `npm ci --prefix frontend`.
+2. Run `npm run dev --prefix frontend`.
+3. Open the local URL printed by Vite, normally `http://localhost:5173`.
+
+The Vite development server proxies `/api` requests to the backend on port 3300. Start both applications to load live course data. Use `npm run build --prefix frontend` for a production build and `npm run lint --prefix frontend` for static checks.
 
 ## Development commands
 
