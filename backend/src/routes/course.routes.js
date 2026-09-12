@@ -1,7 +1,9 @@
 const { Router } = require('express');
+const courseController = require('../controllers/course.controller');
+const asyncHandler = require('../middleware/async-handler');
 
 const courseRouter = Router();
 
-// Public course and author-owned course routes belong here.
+courseRouter.get('/', asyncHandler(courseController.getAll));
 
 module.exports = { courseRouter };

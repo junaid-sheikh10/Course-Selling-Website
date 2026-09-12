@@ -1,7 +1,23 @@
 const { Router } = require('express');
+const userController = require('../controllers/user.controller');
+const wishlistController = require('../controllers/wishlist.controller');
+const asyncHandler = require('../middleware/async-handler');
+const { authenticate } = require('../middleware/authenticate');
+const { validate } = require('../middleware/validate');
+const { updateProfileSchema } = require('../validation/user.schemas');
+const { courseIdParamsSchema } = require('../validation/course.schemas');
 
 const meRouter = Router();
 
-// Profile, author registration, wishlist, cart, and My Courses routes belong here.
+meRouter.use(authenticate);
+
+meRouter.get('/', asyncHandler(userController.getProfile));
+meRouter.patch('/', validate(updateProfileSchema), asyncHandler(userController.updateProfile));
+meRouter.post('/author-registration', asyncHandler(userController.registerAsAuthor));
+meRouter.put(
+  '/wishlist/:courseId',
+  validate(courseIdParamsSchema, 'params'),
+  asyncHandler(wishlistController.addCourse)
+);
 
 module.exports = { meRouter };

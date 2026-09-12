@@ -1,2 +1,7 @@
-// Course creation and update request schemas will be defined here.
-module.exports = {};
+const { z } = require('zod');
+
+const courseIdParamsSchema = z.strictObject({
+  courseId: z.uuid()
+});
+
+module.exports = { courseIdParamsSchema };
