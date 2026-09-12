@@ -3,12 +3,12 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id        String     @id @default(uuid()) @db.Uuid
+  id        String     @id @default(uuid())
   email     String     @unique
   password  String
   firstName String?    @map("first_name")
@@ -18,7 +18,7 @@ model User {
 }
 
 model Admin {
-  id        String   @id @default(uuid()) @db.Uuid
+  id        String   @id @default(uuid())
   email     String   @unique
   password  String
   firstName String?  @map("first_name")
@@ -28,12 +28,12 @@ model Admin {
 }
 
 model Course {
-  id          String     @id @default(uuid()) @db.Uuid
+  id          String     @id @default(uuid())
   title       String
   description String?
-  price       Decimal    @db.Decimal(12, 2)
+  price       Decimal
   imageUrl    String?    @map("image_url")
-  creatorId   String     @map("creator_id") @db.Uuid
+  creatorId   String     @map("creator_id")
   creatorName String?    @map("creator_name")
   creator     Admin      @relation(fields: [creatorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   purchases   Purchase[]
@@ -42,10 +42,10 @@ model Course {
 }
 
 model Purchase {
-  id          String   @id @default(uuid()) @db.Uuid
-  userId      String   @map("user_id") @db.Uuid
-  courseId    String   @map("course_id") @db.Uuid
-  purchasedAt DateTime @default(now()) @map("purchased_at") @db.Timestamptz(6)
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  courseId    String   @map("course_id")
+  purchasedAt DateTime @default(now()) @map("purchased_at")
   user        User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   course      Course   @relation(fields: [courseId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   @@unique([userId, courseId], map: "purchases_user_id_course_id_key")
