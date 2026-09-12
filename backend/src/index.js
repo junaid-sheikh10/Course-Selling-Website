@@ -1,21 +1,16 @@
 const prisma = require('./db');
-const { Prisma } = require('@prisma/client');
 const express = require('express');
-const { adminRouter } = require('./routes/admin');
-const { userRouter } = require('./routes/user');
-const { courseRouter } = require('./routes/course');
+const { authRouter } = require('./routes/auth.routes');
+const { meRouter } = require('./routes/me.routes');
+const { courseRouter } = require('./routes/course.routes');
+const { errorHandler } = require('./middleware/error-handler');
 
 const app = express();
 app.use(express.json());
-app.use('/api/v1/user', userRouter);
-app.use('/api/v1/admin', adminRouter);
-app.use('/api/v1/course', courseRouter);
-app.use((error, req, res, next) => {
-  if (res.headersSent) return next(error);
-  const status = { P2002: 409, P2003: 400, P2000: 400, P2004: 400, P2011: 400, P2020: 400, P2023: 400 }[error.code]
-    || (error instanceof Prisma.PrismaClientValidationError ? 400 : undefined);
-  res.status(status || 500).json({ msg: status === 409 ? 'Record already exists' : status ? 'Invalid database input' : 'Internal server error' });
-});
+app.use('/api/v1/auth', authRouter);
+app.use('/api/v1/me', meRouter);
+app.use('/api/v1/courses', courseRouter);
+app.use(errorHandler);
 
 async function main() {
   await prisma.$connect();

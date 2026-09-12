@@ -8,6 +8,7 @@
     "dev": "nodemon src/index.js",
     "db:migrate": "node scripts/prisma.js migrate deploy",
     "db:migrate:dev": "node scripts/prisma.js migrate dev",
+    "db:reset": "node scripts/prisma.js migrate reset --force",
     "db:generate": "node scripts/prisma.js generate",
     "db:validate": "node scripts/prisma.js validate",
     "db:studio": "node scripts/prisma.js studio",
@@ -18,6 +19,7 @@
   "license": "ISC",
   "dependencies": {
     "@prisma/client": "6.19.3",
+    "bcryptjs": "^3.0.3",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
