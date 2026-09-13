@@ -1,12 +1,41 @@
 import { useQuery } from '@tanstack/react-query'
+import { useCallback } from 'react'
+import { useNavigate, useSearchParams } from 'react-router'
 import { getCourses } from '../api/courses'
 import { CourseCard } from '../components/CourseCard'
+import { CourseModal } from '../components/CourseModal'
+import { useAuth } from '../hooks/useAuth'
+import type { Course } from '../types/course'
 
 export function CoursesPage() {
+  const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const { isAuthenticated, isLoading: isAuthLoading, token } = useAuth()
   const coursesQuery = useQuery({
     queryKey: ['courses'],
     queryFn: getCourses,
   })
+  const selectedCourse = coursesQuery.data?.courses.find(
+    (course) => course.id === searchParams.get('course'),
+  )
+
+  function exploreCourse(course: Course) {
+    if (isAuthLoading) return
+    if (!isAuthenticated) {
+      navigate(`/auth?course=${encodeURIComponent(course.id)}`)
+      return
+    }
+
+    const nextParams = new URLSearchParams(searchParams)
+    nextParams.set('course', course.id)
+    setSearchParams(nextParams)
+  }
+
+  const closeModal = useCallback(() => {
+    const nextParams = new URLSearchParams(searchParams)
+    nextParams.delete('course')
+    setSearchParams(nextParams, { replace: true })
+  }, [searchParams, setSearchParams])
 
   return (
     <section className="page-section">
@@ -32,11 +61,20 @@ export function CoursesPage() {
         {coursesQuery.data && coursesQuery.data.courses.length > 0 && (
           <div className="course-grid">
             {coursesQuery.data.courses.map((course) => (
-              <CourseCard key={course.id} course={course} />
+              <CourseCard
+                key={course.id}
+                course={course}
+                disabled={isAuthLoading}
+                onExplore={exploreCourse}
+              />
             ))}
           </div>
         )}
       </div>
+
+      {isAuthenticated && token && selectedCourse && (
+        <CourseModal course={selectedCourse} token={token} onClose={closeModal} />
+      )}
     </section>
   )
 }

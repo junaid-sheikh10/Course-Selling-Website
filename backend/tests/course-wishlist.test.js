@@ -66,7 +66,7 @@ test.after(async () => {
   await prisma.$disconnect();
 });
 
-test('lists courses with availability and adds a course to the wishlist', async () => {
+test('lists courses and adds a course to the wishlist and cart', async () => {
   const courseResponse = await request('/api/v1/courses');
   assert.equal(courseResponse.status, 200);
 
@@ -94,6 +94,9 @@ test('lists courses with availability and adds a course to the wishlist', async 
     method: 'PUT'
   });
   assert.equal(unauthenticated.status, 401);
+
+  const unauthenticatedWishlist = await request('/api/v1/me/wishlist');
+  assert.equal(unauthenticatedWishlist.status, 401);
 
   const invalidId = await request('/api/v1/me/wishlist/not-a-uuid', {
     method: 'PUT',
@@ -126,4 +129,57 @@ test('lists courses with availability and adds a course to the wishlist', async 
     where: { userId: signup.body.user.id, courseId: TEST_COURSE_ID }
   });
   assert.equal(wishlistCount, 1);
+
+  const wishlist = await request('/api/v1/me/wishlist', { token: signup.body.token });
+  assert.equal(wishlist.status, 200);
+  assert.equal(wishlist.body.wishlist.length, 1);
+  assert.equal(wishlist.body.wishlist[0].course.id, TEST_COURSE_ID);
+  assert.equal(wishlist.body.wishlist[0].course.availableSeats, 5);
+  assert.equal(wishlist.body.wishlist[0].course.author.name, 'Wishlist Test Author');
+
+  const removedWishlistItem = await request(`/api/v1/me/wishlist/${TEST_COURSE_ID}`, {
+    method: 'DELETE',
+    token: signup.body.token
+  });
+  assert.equal(removedWishlistItem.status, 200);
+
+  const emptyWishlist = await request('/api/v1/me/wishlist', { token: signup.body.token });
+  assert.equal(emptyWishlist.status, 200);
+  assert.equal(emptyWishlist.body.wishlist.length, 0);
+
+  const missingWishlistItem = await request(`/api/v1/me/wishlist/${TEST_COURSE_ID}`, {
+    method: 'DELETE',
+    token: signup.body.token
+  });
+  assert.equal(missingWishlistItem.status, 404);
+  assert.equal(missingWishlistItem.body.error.code, 'WISHLIST_ITEM_NOT_FOUND');
+
+  const unauthenticatedCart = await request(`/api/v1/me/cart/${TEST_COURSE_ID}`, {
+    method: 'PUT'
+  });
+  assert.equal(unauthenticatedCart.status, 401);
+
+  const missingCartCourse = await request(`/api/v1/me/cart/${MISSING_COURSE_ID}`, {
+    method: 'PUT',
+    token: signup.body.token
+  });
+  assert.equal(missingCartCourse.status, 404);
+
+  const firstCartAdd = await request(`/api/v1/me/cart/${TEST_COURSE_ID}`, {
+    method: 'PUT',
+    token: signup.body.token
+  });
+  assert.equal(firstCartAdd.status, 200);
+  assert.equal(firstCartAdd.body.cartItem.courseId, TEST_COURSE_ID);
+
+  const secondCartAdd = await request(`/api/v1/me/cart/${TEST_COURSE_ID}`, {
+    method: 'PUT',
+    token: signup.body.token
+  });
+  assert.equal(secondCartAdd.status, 200);
+
+  const cartCount = await prisma.cartItem.count({
+    where: { userId: signup.body.user.id, courseId: TEST_COURSE_ID }
+  });
+  assert.equal(cartCount, 1);
 });

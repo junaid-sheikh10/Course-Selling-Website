@@ -2,6 +2,8 @@ import type { Course } from '../types/course'
 
 interface CourseCardProps {
   course: Course
+  disabled?: boolean
+  onExplore: (course: Course) => void
 }
 
 const euroFormatter = new Intl.NumberFormat('en-IE', {
@@ -9,7 +11,7 @@ const euroFormatter = new Intl.NumberFormat('en-IE', {
   currency: 'EUR',
 })
 
-export function CourseCard({ course }: CourseCardProps) {
+export function CourseCard({ course, disabled = false, onExplore }: CourseCardProps) {
   return (
     <article className="course-card">
       <div className="course-card-topline">
@@ -21,8 +23,18 @@ export function CourseCard({ course }: CourseCardProps) {
       <h2>{course.title}</h2>
       <p>{course.description}</p>
       <div className="course-card-footer">
-        <strong>{euroFormatter.format(course.priceInCents / 100)}</strong>
-        <span>{course.occupiedSeats} of {course.seatLimit} enrolled</span>
+        <div className="course-card-meta">
+          <strong>{euroFormatter.format(course.priceInCents / 100)}</strong>
+          <span>{course.occupiedSeats} of {course.seatLimit} enrolled</span>
+        </div>
+        <button
+          className="button button-primary course-explore"
+          disabled={disabled}
+          type="button"
+          onClick={() => onExplore(course)}
+        >
+          Explore course
+        </button>
       </div>
     </article>
   )

@@ -1,6 +1,7 @@
 const courses = require('../repositories/course.repository');
 const enrollments = require('../repositories/enrollment.repository');
 const wishlistItems = require('../repositories/wishlist.repository');
+const { serializeCourse } = require('./course.service');
 const { AppError } = require('../utils/app-error');
 
 async function addCourse(userId, courseId) {
@@ -22,4 +23,19 @@ async function addCourse(userId, courseId) {
   };
 }
 
-module.exports = { addCourse };
+async function getWishlist(userId) {
+  const items = await wishlistItems.findByUserId(userId);
+  return items.map(item => ({
+    addedAt: item.createdAt,
+    course: serializeCourse(item.course)
+  }));
+}
+
+async function removeCourse(userId, courseId) {
+  const result = await wishlistItems.remove(userId, courseId);
+  if (result.count === 0) {
+    throw new AppError(404, 'WISHLIST_ITEM_NOT_FOUND', 'Course is not in your wishlist');
+  }
+}
+
+module.exports = { getWishlist, addCourse, removeCourse };

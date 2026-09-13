@@ -95,11 +95,16 @@ Passwords are hashed with bcrypt and are never returned by the API. New users re
 
 ```text
 GET /api/v1/courses
+GET /api/v1/me/wishlist
 PUT /api/v1/me/wishlist/:courseId
+DELETE /api/v1/me/wishlist/:courseId
+PUT /api/v1/me/cart/:courseId
 ```
 
 The course list is public. Each course includes its author, price in euro cents, seat limit, occupied seats, available seats, and whether it is full.
 
-Adding a course to a wishlist requires a bearer token. The `PUT` endpoint is idempotent, so sending the same request again does not create a duplicate. It rejects courses that do not exist and courses the user already owns. A full course can still be added to a wishlist.
+Wishlist routes require a bearer token. The list contains complete course and seat-availability details. Adding is idempotent, rejects missing or already-owned courses, and still allows full courses. Removing a course deletes it from the user's wishlist.
+
+Adding a course to the cart also requires a bearer token and is idempotent. It rejects missing, already-owned, and full courses. Cart items do not reserve seats.
 
 Run the API integration tests with `npm test --prefix backend`.
